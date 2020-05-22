@@ -1203,8 +1203,8 @@ create or alter procedure dbo.cstore_GetRowGroupsDetails(
 	@maxSizeInMB Decimal(16,3) = NULL, 				-- Maximum size in MB for a table to be included
 	@minCreatedDateTime Datetime = NULL,			-- The earliest create datetime for Row Group to be included
 	@maxCreatedDateTime Datetime = NULL,			-- The lateste create datetime for Row Group to be included
-	@trimReason tinyint = NULL,						-- Row Groups Trimming Reason. The possible values are NULL - do not filter, 1 - NO_TRIM, 2 - BULKLOAD, 3 – REORG, 4 – DICTIONARY_SIZE, 5 – MEMORY_LIMITATION, 6 – RESIDUAL_ROW_GROUP, 7 - STATS_MISMATCH, 8 - SPILLOVER
-	@compressionOperation tinyint = NULL,			-- Allows filtering on the compression operation. The possible values are NULL - do not filter, 1- NOT_APPLICABLE, 2 – INDEX_BUILD, 3 – TUPLE_MOVER, 4 – REORG_NORMAL, 5 – REORG_FORCED, 6 - BULKLOAD, 7 - MERGE		
+	@trimReason tinyint = NULL,						-- Row Groups Trimming Reason. The possible values are NULL - do not filter, 1 - NO_TRIM, 2 - BULKLOAD, 3 ï¿½ REORG, 4 ï¿½ DICTIONARY_SIZE, 5 ï¿½ MEMORY_LIMITATION, 6 ï¿½ RESIDUAL_ROW_GROUP, 7 - STATS_MISMATCH, 8 - SPILLOVER
+	@compressionOperation tinyint = NULL,			-- Allows filtering on the compression operation. The possible values are NULL - do not filter, 1- NOT_APPLICABLE, 2 ï¿½ INDEX_BUILD, 3 ï¿½ TUPLE_MOVER, 4 ï¿½ REORG_NORMAL, 5 ï¿½ REORG_FORCED, 6 - BULKLOAD, 7 - MERGE		
 	@showNonOptimisedOnly bit = 0					-- Allows to filter out the Row Groups that were not optimized with Vertipaq compression
 -- end of --
 	) as
@@ -2383,9 +2383,11 @@ begin
 		from sys.dm_resource_governor_workload_groups
 		where group_id in (select group_id from sys.dm_exec_requests where session_id = @@spid)
 	-- Get the MAXDOP from the Database Scoped Configurations
-	select @effectiveDop = cast( value as int )
-		from sys.database_scoped_configurations
-		where name = 'MAXDOP' and cast( value as int ) < @effectiveDop;
+	select @effectiveDop = case when value = 'OFF' then 0
+							else cast( value as int ) end
+	from sys.database_scoped_configurations
+	where name = 'MAXDOP' and case when value = 'OFF' then 0
+							else cast( value as int ) end  < @effectiveDop;
 	
 	if( @maxdop < 0 )
 		set @maxdop = 0;

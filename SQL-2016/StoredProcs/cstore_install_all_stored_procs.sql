@@ -1414,8 +1414,8 @@ alter procedure dbo.cstore_GetRowGroupsDetails(
 	@maxSizeInMB Decimal(16,3) = NULL, 				-- Maximum size in MB for a table to be included
 	@minCreatedDateTime Datetime = NULL,			-- The earliest create datetime for Row Group to be included
 	@maxCreatedDateTime Datetime = NULL,			-- The lateste create datetime for Row Group to be included
-	@trimReason tinyint = NULL,						-- Row Groups Trimming Reason. The possible values are NULL - do not filter, 1 - NO_TRIM, 2 - BULKLOAD, 3 – REORG, 4 – DICTIONARY_SIZE, 5 – MEMORY_LIMITATION, 6 – RESIDUAL_ROW_GROUP, 7 - STATS_MISMATCH, 8 - SPILLOVER
-	@compressionOperation tinyint = NULL,			-- Allows filtering on the compression operation. The possible values are NULL - do not filter, 1- NOT_APPLICABLE, 2 – INDEX_BUILD, 3 – TUPLE_MOVER, 4 – REORG_NORMAL, 5 – REORG_FORCED, 6 - BULKLOAD, 7 - MERGE		
+	@trimReason tinyint = NULL,						-- Row Groups Trimming Reason. The possible values are NULL - do not filter, 1 - NO_TRIM, 2 - BULKLOAD, 3 ï¿½ REORG, 4 ï¿½ DICTIONARY_SIZE, 5 ï¿½ MEMORY_LIMITATION, 6 ï¿½ RESIDUAL_ROW_GROUP, 7 - STATS_MISMATCH, 8 - SPILLOVER
+	@compressionOperation tinyint = NULL,			-- Allows filtering on the compression operation. The possible values are NULL - do not filter, 1- NOT_APPLICABLE, 2 ï¿½ INDEX_BUILD, 3 ï¿½ TUPLE_MOVER, 4 ï¿½ REORG_NORMAL, 5 ï¿½ REORG_FORCED, 6 - BULKLOAD, 7 - MERGE		
 	@showNonOptimisedOnly bit = 0					-- Allows to filter out the Row Groups that were not optimized with Vertipaq compression
 -- end of --
 	) as
@@ -1701,7 +1701,7 @@ begin
 		( 2204, 'RTM', 'Intra-query deadlock on communication buffer when you run a bulk load against a clustered columnstore index in SQL Server 2016', 'https://support.microsoft.com/en-us/help/4017154/intra-query-deadlock-on-communication-buffer-when-you-run-a-bulk-load' ),
 		( 4001, 'SP1', 'FIX: Deadlock when you execute a query plan with a nested loop join in batch mode in SQL Server 2014 or 2016', 'https://support.microsoft.com/en-us/kb/3195825' ),
 		( 4001, 'SP1', 'Batch sort and optimized nested loop may cause stability and performance issues.', 'https://support.microsoft.com/en-us/kb/3182545' ),
-		( 4411, 'SP1', 'FIX: The “sys.dm_db_column_store_row_group_physical_stats” query runs slowly on SQL Server 2016', 'https://support.microsoft.com/en-us/help/3210747/fix-the-sys.dm-db-column-store-row-group-physical-stats-query-runs-slowly-on-sql-server-2016' ),
+		( 4411, 'SP1', 'FIX: The ï¿½sys.dm_db_column_store_row_group_physical_statsï¿½ query runs slowly on SQL Server 2016', 'https://support.microsoft.com/en-us/help/3210747/fix-the-sys.dm-db-column-store-row-group-physical-stats-query-runs-slowly-on-sql-server-2016' ),
 		( 4411, 'SP1', 'FIX: An assert error occurs when you insert data into a memory-optimized table that contains a clustered columnstore index in SQL Server 2016', 'https://support.microsoft.com/en-us/help/3211338/fix-an-assert-error-occurs-when-you-insert-data-into-a-memory-optimized-table-that-contains-a-clustered-columnstore-index-in-sql-server-2016' ),
 		( 4411, 'SP1', 'FIX: Error 3628 when you create or rebuild a columnstore index in SQL Server 2016', 'https://support.microsoft.com/en-us/help/3213283/fix-error-3628-when-you-create-or-rebuild-a-columnstore-index-in-sql-server-2016' ),
 		( 4422, 'SP1', 'FIX: Cannot insert data into a table that uses a clustered columnstore index in SQL Server 2016', 'https://support.microsoft.com/en-us/help/3211602' ),
@@ -2775,9 +2775,11 @@ begin
 		from sys.dm_resource_governor_workload_groups
 		where group_id in (select group_id from sys.dm_exec_requests where session_id = @@spid)
 	-- Get the MAXDOP from the Database Scoped Configurations
-	select @effectiveDop = cast( value as int )
-		from sys.database_scoped_configurations
-		where name = 'MAXDOP' and cast( value as int ) < @effectiveDop;
+	select @effectiveDop = case when value = 'OFF' then 0
+							else cast( value as int ) end
+	from sys.database_scoped_configurations
+	where name = 'MAXDOP' and case when value = 'OFF' then 0
+							else cast( value as int ) end  < @effectiveDop;
 	
 	if( @maxdop < 0 )
 		set @maxdop = 0;
